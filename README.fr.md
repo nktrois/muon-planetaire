@@ -2,7 +2,7 @@
 
 *[English](README.md) · Français*
 
-**Muon Planétaire** est l’équivalent planétaire de [Muon](https://github.com/nktrois/muon) : un simulateur léger sans installation, sans serveur et sans dépendance pour préparer son train optique en astrophotographie planétaire, lunaire et solaire.
+**Muon Planétaire** est l’équivalent planétaire de [Muon Ciel profond](https://github.com/nktrois/muon-ciel-profond) : un simulateur léger sans installation, sans serveur et sans dépendance pour préparer son train optique en astrophotographie planétaire, lunaire et solaire.
 
 Il permet de visualiser **la taille réelle de la cible sur ton capteur et dans ton ROI**, tout en modélisant **le tirage réel d’une Barlow** (bagues allonges, ADC, roue à filtres, backfocus caméra) et **l’échantillonnage par rapport à la diffraction** ($F/D$ effectif et tache d’Airy).
 
