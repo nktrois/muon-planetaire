@@ -1,0 +1,20 @@
+name: Muon Planétaire — tests
+on:
+  push:
+  pull_request:
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check ephemeris.js
+          node --check optics.js
+          node --check catalog.js
+          node --check app.js
+      - name: Run optics and ephemeris tests
+        run: node --test tests/optics.test.js

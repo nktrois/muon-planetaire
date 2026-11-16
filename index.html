@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Muon Planétaire : simuler le cadrage, l’échantillonnage, le F/D effectif et le tirage d’une Barlow sur les planètes, la Lune et le Soleil.">
+  <title>Muon Planétaire</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css?v=0.1.0">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">Muon <span class="brand-sub">Planétaire</span></a>
+    <span class="tagline">Simulateur d’imagerie &amp; tirage planétaire</span>
+    <a class="source" href="https://github.com/nktrois/muon" target="_blank" rel="noopener noreferrer">Inspiré de Muon</a>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Réglages">
+
+      <section class="step">
+        <h2><span class="n">1</span> Cible</h2>
+        <label for="targetPreset">Objet</label>
+        <select id="targetPreset"></select>
+
+        <div class="row two">
+          <div>
+            <label for="sizeMode">Taille apparente</label>
+            <select id="sizeMode">
+              <option value="ephemeris">Éphéméride</option>
+              <option value="max">Opposition / Max</option>
+              <option value="mean">Moyenne</option>
+              <option value="min">Conjonction / Min</option>
+              <option value="custom">Personnalisée</option>
+            </select>
+          </div>
+          <div id="dateFieldWrap">
+            <label for="ephemerisDate">Date</label>
+            <input id="ephemerisDate" type="date" min="1800-01-01" max="2050-12-31">
+          </div>
+        </div>
+
+        <details id="targetDetails">
+          <summary>Détails de la cible</summary>
+          <div class="row two">
+            <div><label for="customDiameter">Diamètre (″)</label><input id="customDiameter" type="number" min="0.1" max="20000" step="0.1"></div>
+            <div><label for="customRing">Anneaux (″)</label><input id="customRing" type="number" min="0" max="20000" step="0.1"></div>
+          </div>
+          <label for="customRingTilt">Inclinaison des anneaux (°)</label>
+          <input id="customRingTilt" type="number" min="-30" max="30" step="0.5">
+        </details>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">2</span> Télescope</h2>
+        <label for="telescope">Modèle</label>
+        <select id="telescope"></select>
+        <div class="row two">
+          <div><label for="aperture">Diamètre (mm)</label><input id="aperture" type="number" min="10" max="10000" step="1"></div>
+          <div><label for="focal">Focale (mm)</label><input id="focal" type="number" min="10" max="100000" step="1"></div>
+        </div>
+
+        <details>
+          <summary>Spectre &amp; critère d’échantillonnage</summary>
+          <label for="wavelengthPreset">Bande / filtre</label>
+          <select id="wavelengthPreset"></select>
+          <div class="row two">
+            <div><label for="wavelengthNm">Longueur d’onde (nm)</label><input id="wavelengthNm" type="number" min="250" max="2000" step="5"></div>
+            <div><label for="samplingK">Règle F/D (× px µm)</label><input id="samplingK" type="number" min="1" max="15" step="0.1"></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">3</span> Barlow &amp; tirage</h2>
+        <label for="barlow">Modèle / Type</label>
+        <select id="barlow"></select>
+
+        <div id="spacingControls">
+          <div class="slider-head">
+            <label for="spacerMm">Bagues allonges <output id="spacerValue">0 mm</output></label>
+            <input id="spacerInput" type="number" min="0" max="300" step="1" aria-label="Bagues allonges en mm">
+          </div>
+          <input id="spacerMm" type="range" min="0" max="150" value="0" step="1">
+
+          <div class="check-row">
+            <label class="check"><input id="useAdc" type="checkbox"> <span>ADC <span class="muted" id="adcHint">(+48 mm)</span></span></label>
+            <label class="check"><input id="useFilterWheel" type="checkbox"> <span>Filtres <span class="muted" id="filterHint">(+20 mm)</span></span></label>
+          </div>
+        </div>
+
+        <div class="hidden" id="fixedFactorRow">
+          <label for="fixedFactor">Facteur optique fixe (×)</label>
+          <input id="fixedFactor" type="number" min="0.1" max="20" step="0.01" value="1">
+        </div>
+
+        <details id="barlowDetails">
+          <summary>Détails Barlow &amp; chaîne de tirage</summary>
+          <div class="row two">
+            <div>
+              <label for="barlowMode">Comportement</label>
+              <select id="barlowMode">
+                <option value="none">Au foyer (1×)</option>
+                <option value="diverging">Divergente</option>
+                <option value="telecentric">Télécentrique</option>
+                <option value="progressive">Powermate 5×</option>
+                <option value="fixed">Facteur fixe</option>
+              </select>
+            </div>
+            <div id="barlowFocalWrap">
+              <label for="barlowFocalMm">Focale |f<sub>b</sub>| (mm)</label>
+              <input id="barlowFocalMm" type="number" min="5" max="2000" step="0.5">
+            </div>
+            <div class="hidden" id="barlowNominalWrap">
+              <label for="barlowNominalFactor">Facteur nominal</label>
+              <input id="barlowNominalFactor" type="number" min="0.1" max="20" step="0.05">
+            </div>
+          </div>
+          <div class="row two">
+            <div><label for="barlowBarrelMm">Corps Barlow (mm)</label><input id="barlowBarrelMm" type="number" min="0" max="300" step="0.5"></div>
+            <div><label for="cameraBackfocusMm">Backfocus cam. (mm)</label><input id="cameraBackfocusMm" type="number" min="0" max="150" step="0.5"></div>
+          </div>
+          <div class="row two">
+            <div><label for="adcMm">Longueur ADC (mm)</label><input id="adcMm" type="number" min="0" max="200" step="1"></div>
+            <div><label for="filterMm">Roue / tiroir (mm)</label><input id="filterMm" type="number" min="0" max="150" step="1"></div>
+          </div>
+          <p class="hint" id="spacingSummary"></p>
+        </details>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">4</span> Caméra &amp; ROI</h2>
+        <label for="camera">Modèle</label>
+        <select id="camera"></select>
+
+        <div class="row two">
+          <div>
+            <label for="roiPreset">ROI (fenêtre)</label>
+            <select id="roiPreset"></select>
+          </div>
+          <div>
+            <label for="binning">Binning</label>
+            <select id="binning">
+              <option value="1">1 × 1</option>
+              <option value="2">2 × 2</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="rotation">Orientation <output id="rotationValue">0°</output></label>
+        <input id="rotation" type="range" min="-180" max="180" value="0" step="1">
+
+        <details id="cameraDetails">
+          <summary>Détails capteur &amp; ROI</summary>
+          <div class="row two">
+            <div><label for="pixelsX">Capteur L (px)</label><input id="pixelsX" type="number" min="1" max="100000" step="1"></div>
+            <div><label for="pixelsY">Capteur H (px)</label><input id="pixelsY" type="number" min="1" max="100000" step="1"></div>
+          </div>
+          <label for="pixelUm">Taille d’un pixel (µm)</label>
+          <input id="pixelUm" type="number" min="0.01" max="100" step="0.01">
+          <div class="row two">
+            <div><label for="roiX">ROI L (px)</label><input id="roiX" type="number" min="16" max="100000" step="2"></div>
+            <div><label for="roiY">ROI H (px)</label><input id="roiY" type="number" min="16" max="100000" step="2"></div>
+          </div>
+        </details>
+      </section>
+
+      <button id="reset" type="button" class="link">Réinitialiser</button>
+    </aside>
+
+    <main class="main">
+      <div class="main-head">
+        <div>
+          <h1 id="objectTitle">Jupiter</h1>
+          <div class="muted" id="positionLabel"></div>
+        </div>
+        <div class="actions">
+          <select id="viewMode" aria-label="Mode de vue">
+            <option value="roi">Zoom sur ROI</option>
+            <option value="sensor">Capteur complet</option>
+            <option value="planet">Zoom sur cible (grille px)</option>
+          </select>
+          <button id="toggleGrid" type="button" class="secondary" aria-pressed="true">Grille</button>
+          <button id="fitFrame" type="button" class="secondary">Recentrer</button>
+        </div>
+      </div>
+
+      <div class="atlas">
+        <canvas id="skyCanvas" aria-label="Simulation visuelle capteur et cible"></canvas>
+        <div class="atlas-status"><span id="atlasStatus"></span> · <span id="legendLabel"></span></div>
+      </div>
+
+      <div id="error" class="error" role="alert" hidden></div>
+
+      <section class="results" aria-label="Résultats">
+        <div><span class="label">Cible sur capteur</span><span class="value" id="statTargetPx"></span><span class="muted" id="statTargetCoverage"></span></div>
+        <div><span class="label">Échantillonnage</span><span class="value" id="statScale"></span><span class="muted" id="statSampling"></span></div>
+        <div><span class="label">Focale &amp; F/D</span><span class="value" id="statFocal"></span><span class="muted" id="statFactor"></span></div>
+        <div><span class="label">Champ actif</span><span class="value" id="statFov"></span><span class="muted" id="statSensor"></span></div>
+      </section>
+
+      <footer class="foot">
+        <span class="muted" id="footerNote">Modèle géométrique, tirage de Barlow &amp; diffraction (Airy). Fonctionne 100 % hors ligne.</span>
+        <span class="actions">
+          <button id="copyLink" type="button" class="secondary">Copier le lien</button>
+          <button id="downloadJson" type="button" class="secondary">Exporter JSON</button>
+        </span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="ephemeris.js?v=0.1.0"></script>
+  <script src="optics.js?v=0.1.0"></script>
+  <script src="catalog.js?v=0.1.0"></script>
+  <script src="app.js?v=0.1.0"></script>
+</body>
+</html>
