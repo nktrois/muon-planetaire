@@ -1,28 +1,26 @@
-# Muon Planétaire — planetary imaging & Barlow spacing simulator
+# Muon Planétaire — planetary imaging simulator
 
 *English · [Français](README.fr.md)*
 
 **[▶ Open the app](https://nktrois.github.io/muon-planetaire/)**, nothing to install.
 
-**Muon Planétaire** is the planetary sister app to [Muon Ciel profond](https://github.com/nktrois/muon-ciel-profond): a zero-dependency, static HTML/CSS/JavaScript simulator for planetary, lunar, and solar astrophotography. No install, no server, no account: it runs in any recent browser on Windows, macOS, and Linux. The interface is in French.
+**Muon Planétaire** shows the **apparent size of a planet, the Moon, or the Sun on your sensor**, along with Barlow spacing, ROI framing, sampling, and mosaics. No install, no server, no account: it runs in any recent browser on Windows, macOS and Linux. The interface is in French.
 
 ## Features
 
-- **Solar System targets**: Mercury, Venus, Mars, Jupiter, Saturn (globe + tilted rings), Uranus, Neptune, Moon (full disc, Clavius, Copernicus), Sun, and custom targets.
-- **Built-in offline ephemeris (1800–2050)**: computes apparent angular diameter, distance (AU / km), illuminated phase, and Saturn's ring tilt angle for any date, plus *Opposition / Mean / Conjunction* presets and manual dimensions.
-- **Telescopes & spectral band**: common presets (Newton, Dobson, SCT, Maksutov, refractors) or custom aperture and focal length; selectable wavelength (Visible 550 nm, Blue, Red, IR 685/850 nm, CH4 889 nm) and adjustable sampling F/D rule.
-- **Barlows, reducers & spacing (tirage)**:
-  - Focal reducers (`0.5×`, `0.63×`, `0.7×`, `0.8×`), classical diverging Barlows (`1.3×` to `5×`), telecentric amplifiers (`2×` to `5×` Powermate / Focal Extender), or any custom fixed factor.
-  - Optional advanced spacing chain: Barlow barrel length, extension spacers, ADC, filter drawer/wheel, and camera flange focal distance, with live spacing guidance.
-- **Planetary & DSO/lunar cameras, ROI & mosaics**: ZWO planetary cameras (ASI120MC-S, ASI224MC, ASI662MC, ASI678MC, ASI462MC, ASI585MC, ASI715MC, ASI290MM, ASI178MC, ASI174MM), large sensors for Moon/Sun (ASI533MC, ASI294MC, ASI183MC, ASI2600MC, APS-C, full frame) or custom sensor; `1×1` / `2×2` binning, ROI windowing, and `2×2` to `4×4` mosaics with adjustable overlap.
-- **Scaled interactive preview**: full sensor, ROI zoom, or target zoom with pixel grid, scale bar, and live **Airy disc vs pixel grid** inset.
-- **100% offline**: shareable URL-encoded parameters and full JSON export.
+- Solar System targets (Mercury through Neptune, Saturn's rings, Moon, Sun, lunar craters) and custom diameters.
+- Apparent angular diameter, distance, illuminated phase, and Saturn ring tilt computed for a chosen date (JPL Standish elements 1800–2050), or Opposition / Mean / Conjunction presets.
+- Telescope presets (Newton, Dobson, SCT, Maksutov, refractors) or custom aperture and focal length; spectral band (Visible 550 nm, Blue, Red, IR 685/850 nm, CH4 889 nm) and seeing sampling rule.
+- Focal reducers (`0.5×`–`0.8×`), classical diverging Barlows (`1.3×`–`5×`) with spacing calculation (barrel, spacers, ADC, filter wheel, camera backfocus), telecentric amplifiers (`2×`–`5×`), or any fixed factor.
+- ZWO planetary and large-sensor presets (ASI120MC-S, ASI224MC, ASI662MC, ASI678MC, ASI462MC, ASI585MC, ASI715MC, ASI290MM, ASI178MC, ASI174MM, ASI533MC, ASI294MC, ASI183MC, ASI2600MC…) or custom sensor, binning `1×1` / `2×2`, ROI framing, rotation, and `2×2`–`4×4` mosaics.
+- Pixel scale (`″/px`), effective `f/` ratio, Rayleigh/Airy diameter vs pixel grid inset, shareable URL link, and JSON export.
+- Plain **HTML/CSS/JavaScript**, no build step, nothing to install.
 
 ## Run it
 
 **Online:** [https://nktrois.github.io/muon-planetaire/](https://nktrois.github.io/muon-planetaire/), works on computer and phone.
 
-**Offline copy:** download the repository (*Code → Download ZIP*), unzip it, and double-click `index.html`. Everything runs offline without any network call.
+**Local copy:** download the repository (*Code → Download ZIP*), unzip it and double-click `index.html`.
 
 ## Tests
 
@@ -34,9 +32,9 @@ node --test tests/optics.test.js
 
 ## Limitations
 
-- Ideal geometric optics and diffraction model (Rayleigh / Airy disc at wavelength $\lambda$); atmospheric seeing, collimation, mechanical vignetting, spherical aberration far outside a Barlow's design spacing, and SCT/Maksutov primary-mirror focal shift with backfocus are not modeled automatically.
-- Ephemerides use JPL Standish approximate Keplerian elements (1800–2050) and a simplified lunar distance formula: accurate enough for framing and apparent diameter, not for precision astrometry.
-- Planet surface markings (Jupiter cloud belts, lunar maria) are schematic; angular diameters, oblateness, phase illumination, and Saturn ring tilt follow the computed geometry.
+- Ideal geometric optics and diffraction model (Rayleigh / Airy disc at wavelength $\lambda$): seeing, collimation, vignetting, spherical aberration far from a Barlow's nominal spacing, and primary-mirror focal shift on SCT/Maksutov tubes are not modeled.
+- Ephemerides use JPL Standish approximate Keplerian elements (1800–2050) and a simplified lunar distance formula: accurate enough for framing and apparent diameter, not for astrometry.
+- Surface markings on planet and lunar discs are illustrative; only angular sizes, oblateness, phase, and Saturn ring tilt are computed.
 
 ## License
 

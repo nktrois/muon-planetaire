@@ -277,14 +277,12 @@
     sizeParts.push(`Résolution Airy ${dec(optics.airyDiameterArcsec, 2)}″`);
     $('positionLabel').textContent = sizeParts.join(' · ');
 
-    // Keep computed geometry visible inside target details when not in custom mode
     if (target.id !== 'custom' && state.sizeMode !== 'custom') {
       $('customDiameter').value = Number(targetGeom.diameterArcsec.toFixed(2));
       $('customRing').value = targetGeom.ringArcsec ? Number(targetGeom.ringArcsec.toFixed(2)) : 0;
       $('customRingTilt').value = targetGeom.ringTiltDeg ? Number(targetGeom.ringTiltDeg.toFixed(1)) : 0;
     }
 
-    // Stat 1: Target size in pixels
     const primaryPx = targetGeom.ringArcsec > 0 ? footprint.ringWidthPx : footprint.diameterPx;
     const secondaryPx = targetGeom.ringArcsec > 0 ? footprint.diameterPx : footprint.polarPx;
     $('statTargetPx').innerHTML = targetGeom.ringArcsec > 0
@@ -301,7 +299,7 @@
         covEl.className = 'muted status-bad';
       }
     } else if (!footprint.fitsSensor) {
-      covEl.textContent = `Dépasse du capteur (${dec(footprint.sensorCoveragePct, 0)} %) — essaie une mosaïque`;
+      covEl.textContent = `Dépasse du capteur (${dec(footprint.sensorCoveragePct, 0)} %)`;
       covEl.className = 'muted status-bad';
     } else if (!footprint.fitsRoi) {
       covEl.textContent = `Dépasse du ROI (${dec(footprint.roiCoveragePct, 0)} %)`;
@@ -311,14 +309,12 @@
       covEl.className = 'muted';
     }
 
-    // Stat 2: Sampling
     $('statScale').innerHTML = `${dec(optics.scaleArcsecPerPixel, 3)} <span>″/px</span>`;
     const sampEl = $('statSampling');
     const st = optics.samplingStatus;
     const statusClass = st.code === 'optimal' ? 'status-ok' : (st.code === 'slightly_under' || st.code === 'slightly_over') ? 'status-warn' : 'status-bad';
     sampEl.innerHTML = `<span class="${statusClass}">${st.label}</span> · cible f/${dec(optics.optimalFocalRatio, 1)}`;
 
-    // Stat 3: Effective focal length & Barlow
     $('statFocal').innerHTML = `${intFmt.format(Math.round(optics.effectiveFocalMm))} <span>mm</span> <span class="muted">(f/${dec(optics.effectiveFocalRatio, 1)})</span>`;
     if (state.barlowMode === 'none') {
       $('statFactor').textContent = `Au foyer (f/${dec(optics.nativeFocalRatio, 1)}) · idéal ~${dec(optics.idealFactor, 2)}×`;
@@ -328,7 +324,6 @@
       $('statFactor').textContent = `${intFmt.format(state.focal)} mm × ${dec(optics.effectiveFactor, 2)} · tirage ${dec(spacing.totalSpacingMm, 0)} mm`;
     }
 
-    // Stat 4: Active FOV & sensor / mosaic
     const fovW = isMosaic ? mosaicMetrics.widthArcsec : optics.fovWidthArcsec;
     const fovH = isMosaic ? mosaicMetrics.heightArcsec : optics.fovHeightArcsec;
     $('statFov').innerHTML = `${formatAngleArcsec(fovW)} <span>×</span> ${formatAngleArcsec(fovH)}`;
@@ -336,24 +331,19 @@
       ? `Mosaïque ${mosaicMetrics.countPerAxis} × ${mosaicMetrics.countPerAxis} · ${mosaicMetrics.overlapPercent} % de recouvrement`
       : `ROI ${optics.activePxX} × ${optics.activePxY} px · capteur ${dec(optics.sensorWidthMm)} × ${dec(optics.sensorHeightMm)} mm`;
 
-    // Spacing guidance summary inside Barlow details
     const summaryEl = $('spacingSummary');
     if (state.barlowMode === 'none') {
-      summaryEl.textContent = `Sans Barlow : facteur idéal estimé ${dec(optics.idealFactor, 2)}× (pour f/${dec(optics.optimalFocalRatio, 1)}).`;
+      summaryEl.textContent = `Sans Barlow : facteur cible ~${dec(optics.idealFactor, 2)}× (pour f/${dec(optics.optimalFocalRatio, 1)}).`;
     } else if (guidance.adjustable) {
       const sign = guidance.deltaMm >= 0 ? '+' : '−';
       const absDelta = Math.abs(guidance.deltaMm);
-      const advice = absDelta < 3
-        ? 'tirage déjà au point optimal.'
-        : guidance.deltaMm > 0
-          ? `ajoute ~${dec(absDelta, 0)} mm de bague pour viser f/${dec(optics.optimalFocalRatio, 1)}.`
-          : `retire ~${dec(absDelta, 0)} mm de tirage pour viser f/${dec(optics.optimalFocalRatio, 1)}.`;
-      summaryEl.textContent = `Tirage total : ${dec(spacing.totalSpacingMm, 1)} mm → ${dec(optics.effectiveFactor, 2)}× (${sign}${dec(absDelta, 0)} mm : ${advice})`;
+      summaryEl.textContent = absDelta < 3
+        ? `Tirage : ${dec(spacing.totalSpacingMm, 1)} mm → ${dec(optics.effectiveFactor, 2)}× (proche de f/${dec(optics.optimalFocalRatio, 1)})`
+        : `Tirage : ${dec(spacing.totalSpacingMm, 1)} mm → ${dec(optics.effectiveFactor, 2)}× (cible f/${dec(optics.optimalFocalRatio, 1)} : ${sign}${dec(absDelta, 0)} mm)`;
     } else {
-      summaryEl.textContent = `Tirage mécanique : ${dec(spacing.totalSpacingMm, 1)} mm · facteur fixe ${dec(optics.effectiveFactor, 2)}× (cible idéale ~${dec(optics.idealFactor, 2)}×).`;
+      summaryEl.textContent = `Tirage mécanique : ${dec(spacing.totalSpacingMm, 1)} mm · facteur ${dec(optics.effectiveFactor, 2)}×`;
     }
 
-    // Atlas bottom status
     const statusEl = $('atlasStatus');
     statusEl.innerHTML = `<span class="${statusClass}">${st.label}</span> · f/${dec(optics.effectiveFocalRatio, 1)} · Airy ${dec(optics.airyDiameterPx, 1)} px`;
     if (isMosaic) {
@@ -473,11 +463,9 @@
     ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     ctx.clip();
 
-    // Dark side base
     ctx.fillStyle = '#181a20';
     ctx.fillRect(-rx - 2, -ry - 2, rx * 2 + 4, ry * 2 + 4);
 
-    // Lit limb gradient
     const grad = ctx.createRadialGradient(-rx * 0.2 * phaseSign, -ry * 0.15, rx * 0.1, 0, 0, rx * 1.05);
     grad.addColorStop(0, color);
     grad.addColorStop(0.85, color);
@@ -514,7 +502,6 @@
     ctx.fillStyle = grad;
     ctx.fillRect(-rx, -ry, rx * 2, ry * 2);
 
-    // Cloud belts (illustrative schematic)
     const bands = [
       { y: -0.58, h: 0.11, color: 'rgba(130, 88, 52, 0.35)' },
       { y: -0.26, h: 0.16, color: 'rgba(148, 86, 48, 0.58)' },
@@ -526,7 +513,6 @@
       ctx.fillRect(-rx, b.y * ry - (b.h * ry) / 2, rx * 2, b.h * ry);
     }
 
-    // Subtle GRS
     if (rx > 10) {
       ctx.fillStyle = 'rgba(188, 88, 56, 0.72)';
       ctx.beginPath();
@@ -569,11 +555,10 @@
       ctx.restore();
     };
 
-    // For B >= 0 (northern face visible), northern half (top) is behind globe, southern half (bottom) is in front.
+    // B >= 0: northern half behind globe, southern half in front.
     const frontIsBottom = tiltDeg >= 0;
     drawRingHalf(!frontIsBottom);
 
-    // Globe
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
@@ -721,7 +706,6 @@
       return;
     }
 
-    // Full sensor outline
     ctx.strokeStyle = 'rgba(139, 145, 156, 0.45)';
     ctx.lineWidth = 1.2;
     ctx.setLineDash([6, 4]);
@@ -733,12 +717,10 @@
       ctx.fillText(`Capteur ${optics.sensorBinPxX} × ${optics.sensorBinPxY} px`, cx - sW / 2 + 6, cy - sH / 2 - 6);
     }
 
-    // Active ROI frame in Muon amber
     ctx.strokeStyle = '#ffb347';
     ctx.lineWidth = 2;
     ctx.strokeRect(cx - rW / 2, cy - rH / 2, rW, rH);
 
-    // Subtle label on top of ROI
     ctx.fillStyle = '#ffb347';
     const roiText = state.roiId === 'full'
       ? `${optics.activePxX} × ${optics.activePxY} px (${formatAngleArcsec(optics.fovWidthArcsec)} × ${formatAngleArcsec(optics.fovHeightArcsec)})`
@@ -800,7 +782,6 @@
     ctx.font = '11px system-ui, -apple-system, sans-serif';
     ctx.fillText(`Tache d’Airy (${Math.round(state.wavelengthNm)} nm)`, bx + 10, by + 17);
 
-    // Draw adaptive odd sensor pixel grid centered in inset so Airy diameter stays to true scale
     const gridSizePx = 66;
     const gridPx = [5, 9, 13, 19, 27].find((n) => optics.airyDiameterPx <= n * 0.85) || 27;
     const cell = gridSizePx / gridPx;
@@ -820,7 +801,6 @@
       ctx.stroke();
     }
 
-    // Airy first dark ring radius in pixels: airyDiameterPx / 2
     const displayR = Math.min(gridSizePx * 0.48, Math.max(1.8, (optics.airyDiameterPx / 2) * cell));
 
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, displayR);

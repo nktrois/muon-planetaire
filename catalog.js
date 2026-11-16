@@ -56,7 +56,7 @@
     { id: 'tele25', name: 'Télécentrique 2,5× (Powermate)', group: 'Télécentriques (facteur fixe)', mode: 'telecentric', nominalFactor: 2.5, barlowFocalMm: 75, barlowBarrelMm: 0 },
     { id: 'tele3', name: 'Télécentrique 3× (Focal Extender)', group: 'Télécentriques (facteur fixe)', mode: 'telecentric', nominalFactor: 3.0, barlowFocalMm: 75, barlowBarrelMm: 0 },
     { id: 'tele4', name: 'Télécentrique 4× (Powermate)', group: 'Télécentriques (facteur fixe)', mode: 'telecentric', nominalFactor: 4.0, barlowFocalMm: 75, barlowBarrelMm: 0 },
-    { id: 'tele5', name: 'Télécentrique 5× (Powermate)*', group: 'Télécentriques (facteur fixe)', mode: 'progressive', nominalFactor: 5.0, barlowFocalMm: 75, barlowBarrelMm: 0, progressiveRefMm: 12.5, progressiveGainPerMm: 1 / 35 },
+    { id: 'tele5', name: 'Télécentrique 5× (Powermate)', group: 'Télécentriques (facteur fixe)', mode: 'progressive', nominalFactor: 5.0, barlowFocalMm: 75, barlowBarrelMm: 0, progressiveRefMm: 12.5, progressiveGainPerMm: 1 / 35 },
     { id: 'custom_fixed', name: 'Autre facteur fixe…', group: 'Personnalisé', mode: 'fixed', nominalFactor: 1.0, barlowFocalMm: 75, barlowBarrelMm: 0 },
     { id: 'custom_div', name: 'Barlow divergente personnalisée…', group: 'Personnalisé', mode: 'diverging', nominalFactor: 2.0, barlowFocalMm: 75, barlowBarrelMm: 62.5 }
   ];
@@ -104,11 +104,11 @@
   ];
 
   const SEEING_PRESETS = [
-    { id: 'poor', name: 'Turbulence forte (F/D ≈ 3,5 × px)', k: 3.5 },
-    { id: 'average', name: 'Ciel moyen (F/D ≈ 4 × px)', k: 4.0 },
-    { id: 'standard', name: 'Standard polyvalent (F/D ≈ 5 × px)', k: 5.0 },
-    { id: 'good', name: 'Très bon ciel / mono (F/D ≈ 6 × px)', k: 6.0 },
-    { id: 'custom', name: 'Personnalisé', k: 5.0 }
+    { id: 'poor', name: 'Turbulence forte (3,5× px)', k: 3.5 },
+    { id: 'average', name: 'Ciel moyen (4× px)', k: 4.0 },
+    { id: 'standard', name: 'Standard (5× px)', k: 5.0 },
+    { id: 'good', name: 'Très bon ciel (6× px)', k: 6.0 },
+    { id: 'custom', name: 'Autre…', k: 5.0 }
   ];
 
   const api = { TARGETS, TELESCOPES, BARLOWS, CAMERAS, ROI_PRESETS, WAVELENGTHS, SEEING_PRESETS };
