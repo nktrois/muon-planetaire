@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="Muon Planétaire : simuler le cadrage, l’échantillonnage, le F/D effectif et le tirage d’une Barlow sur les planètes, la Lune et le Soleil.">
+  <meta name="description" content="Muon Planétaire : simuler le cadrage, les mosaïques lunaires/solaires, l’échantillonnage, le F/D effectif et le tirage d’une Barlow.">
   <title>Muon Planétaire</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=0.1.0">
+  <link rel="stylesheet" href="style.css?v=0.2.0">
 </head>
 <body>
   <header class="topbar">
@@ -28,11 +28,11 @@
           <div>
             <label for="sizeMode">Taille apparente</label>
             <select id="sizeMode">
-              <option value="ephemeris">Éphéméride</option>
-              <option value="max">Opposition / Max</option>
+              <option value="ephemeris">Par date</option>
+              <option value="max">Opposition (max)</option>
               <option value="mean">Moyenne</option>
-              <option value="min">Conjonction / Min</option>
-              <option value="custom">Personnalisée</option>
+              <option value="min">Conjonction (min)</option>
+              <option value="custom">Manuelle</option>
             </select>
           </div>
           <div id="dateFieldWrap">
@@ -62,19 +62,25 @@
         </div>
 
         <details>
-          <summary>Spectre &amp; critère d’échantillonnage</summary>
+          <summary>Qualité du ciel &amp; filtre</summary>
+          <label for="seeingPreset">Seeing / turbulence</label>
+          <select id="seeingPreset"></select>
+          <div class="hidden" id="customSeeingRow">
+            <label for="samplingK">Critère F/D cible (× pixel µm)</label>
+            <input id="samplingK" type="number" min="1" max="15" step="0.1">
+          </div>
           <label for="wavelengthPreset">Bande / filtre</label>
           <select id="wavelengthPreset"></select>
-          <div class="row two">
-            <div><label for="wavelengthNm">Longueur d’onde (nm)</label><input id="wavelengthNm" type="number" min="250" max="2000" step="5"></div>
-            <div><label for="samplingK">Règle F/D (× px µm)</label><input id="samplingK" type="number" min="1" max="15" step="0.1"></div>
+          <div class="hidden" id="customWavelengthRow">
+            <label for="wavelengthNm">Longueur d’onde (nm)</label>
+            <input id="wavelengthNm" type="number" min="250" max="2000" step="5">
           </div>
         </details>
       </section>
 
       <section class="step">
-        <h2><span class="n">3</span> Barlow &amp; tirage</h2>
-        <label for="barlow">Modèle / Type</label>
+        <h2><span class="n">3</span> Barlow / Réducteur</h2>
+        <label for="barlow">Modèle / Facteur</label>
         <select id="barlow"></select>
 
         <div id="spacingControls">
@@ -96,7 +102,8 @@
         </div>
 
         <details id="barlowDetails">
-          <summary>Détails Barlow &amp; chaîne de tirage</summary>
+          <summary>Réglage avancé du tirage</summary>
+          <p class="hint">Valeurs moyennes du commerce pré-remplies. Pour un calcul direct sans tirage, choisis <em>Autre facteur fixe…</em></p>
           <div class="row two">
             <div>
               <label for="barlowMode">Comportement</label>
@@ -109,7 +116,7 @@
               </select>
             </div>
             <div id="barlowFocalWrap">
-              <label for="barlowFocalMm">Focale |f<sub>b</sub>| (mm)</label>
+              <label for="barlowFocalMm">Focale Barlow (mm)</label>
               <input id="barlowFocalMm" type="number" min="5" max="2000" step="0.5">
             </div>
             <div class="hidden" id="barlowNominalWrap">
@@ -118,7 +125,7 @@
             </div>
           </div>
           <div class="row two">
-            <div><label for="barlowBarrelMm">Corps Barlow (mm)</label><input id="barlowBarrelMm" type="number" min="0" max="300" step="0.5"></div>
+            <div><label for="barlowBarrelMm">Tirage de base (mm)</label><input id="barlowBarrelMm" type="number" min="0" max="300" step="0.5"></div>
             <div><label for="cameraBackfocusMm">Backfocus cam. (mm)</label><input id="cameraBackfocusMm" type="number" min="0" max="150" step="0.5"></div>
           </div>
           <div class="row two">
@@ -166,6 +173,22 @@
         </details>
       </section>
 
+      <section class="step">
+        <h2><span class="n">5</span> Mosaïque</h2>
+        <div class="row two">
+          <div>
+            <label for="mosaic">Grille</label>
+            <select id="mosaic">
+              <option value="1">Aucune</option>
+              <option value="2">2 × 2</option>
+              <option value="3">3 × 3</option>
+              <option value="4">4 × 4</option>
+            </select>
+          </div>
+          <div><label for="overlap">Recouvrement (%)</label><input id="overlap" type="number" min="0" max="60" step="1"></div>
+        </div>
+      </section>
+
       <button id="reset" type="button" class="link">Réinitialiser</button>
     </aside>
 
@@ -177,7 +200,7 @@
         </div>
         <div class="actions">
           <select id="viewMode" aria-label="Mode de vue">
-            <option value="roi">Zoom sur ROI</option>
+            <option value="roi">Zoom sur cadre / mosaïque</option>
             <option value="sensor">Capteur complet</option>
             <option value="planet">Zoom sur cible (grille px)</option>
           </select>
@@ -210,9 +233,9 @@
     </main>
   </div>
 
-  <script src="ephemeris.js?v=0.1.0"></script>
-  <script src="optics.js?v=0.1.0"></script>
-  <script src="catalog.js?v=0.1.0"></script>
-  <script src="app.js?v=0.1.0"></script>
+  <script src="ephemeris.js?v=0.2.0"></script>
+  <script src="optics.js?v=0.2.0"></script>
+  <script src="catalog.js?v=0.2.0"></script>
+  <script src="app.js?v=0.2.0"></script>
 </body>
 </html>

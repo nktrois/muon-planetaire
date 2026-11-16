@@ -4,6 +4,7 @@ const {
   computeBarlowSpacing,
   calculatePlanetaryOptics,
   computeSpacingGuidance,
+  computePlanetaryMosaic,
   computeTargetFootprint,
   formatAngleArcsec
 } = require('../optics.js');
@@ -177,6 +178,43 @@ test('Ephemeris reproduces key planetary oppositions, phases, and Saturn ring ti
   const sunJan = computeTargetGeometry({ target: byId('sun'), sizeMode: 'ephemeris', dateStr: '2026-01-03' });
   const sunJul = computeTargetGeometry({ target: byId('sun'), sizeMode: 'ephemeris', dateStr: '2026-07-06' });
   assert.ok(sunJan.diameterArcsec > sunJul.diameterArcsec);
+});
+
+test('Lunar mosaic and focal reducer accurately expand framing coverage', () => {
+  const opt = calculatePlanetaryOptics({
+    apertureMm: 203,
+    focalMm: 2032,
+    factor: 0.63,
+    pixelsX: 3008,
+    pixelsY: 3008,
+    pixelUm: 3.76
+  });
+  const single = computePlanetaryMosaic({ optics: opt, mosaic: 1, overlapPercent: 15 });
+  const mosaic2 = computePlanetaryMosaic({ optics: opt, mosaic: 2, overlapPercent: 15 });
+  assert.equal(single.panelCount, 1);
+  assert.equal(mosaic2.panelCount, 4);
+  assert.ok(mosaic2.widthArcsec > opt.fovWidthArcsec);
+  assert.ok(mosaic2.widthArcsec < 2 * opt.fovWidthArcsec);
+
+  const moonFit = computeTargetFootprint({
+    optics: opt,
+    targetGeom: { diameterArcsec: 1865, polarArcsec: 1865, ringArcsec: 0, ringTiltDeg: 0 },
+    mosaicMetrics: mosaic2
+  });
+  assert.equal(moonFit.fitsRoi, false);
+  assert.equal(moonFit.fitsMosaic, true);
+});
+
+test('Barlow 5x diverging matches nominal 5x at default camera spacing', () => {
+  const b5 = BARLOWS.find((b) => b.id === 'barlow5');
+  const res = computeBarlowSpacing({
+    barlowMode: b5.mode,
+    nominalFactor: b5.nominalFactor,
+    barlowFocalMm: b5.barlowFocalMm,
+    barlowBarrelMm: b5.barlowBarrelMm,
+    cameraBackfocusMm: 12.5
+  });
+  assert.ok(Math.abs(res.effectiveFactor - 5.0) < 1e-9);
 });
 
 test('Input validation and formatting edge cases', () => {

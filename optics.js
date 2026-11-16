@@ -209,8 +209,47 @@
     return { adjustable: false, idealSpacingMm: null, deltaMm: null };
   }
 
-  /** Compute target dimensions in pixels and fit margins inside ROI & full sensor. */
-  function computeTargetFootprint({ optics, targetGeom }) {
+  /** Compute mosaic grid panels (1x1 to 4x4) in sensor pixel offsets and total angular span. */
+  function computePlanetaryMosaic({ optics, mosaic = 1, overlapPercent = 15 }) {
+    const n = Number(mosaic);
+    const overlap = Number(overlapPercent);
+    if (!Number.isInteger(n) || n < 1 || n > 4) throw new RangeError('Mosaïque invalide (1 à 4).');
+    if (!Number.isFinite(overlap) || overlap < 0 || overlap >= 70) throw new RangeError('Recouvrement invalide (0 à 60 %).');
+
+    const stepX = optics.activePxX * (1 - overlap / 100);
+    const stepY = optics.activePxY * (1 - overlap / 100);
+    const panels = [];
+    for (let row = 0; row < n; row++) {
+      for (let col = 0; col < n; col++) {
+        panels.push({
+          row,
+          col,
+          index: row * n + col + 1,
+          centerOffsetPxX: (col - (n - 1) / 2) * stepX,
+          centerOffsetPxY: (row - (n - 1) / 2) * stepY
+        });
+      }
+    }
+
+    const widthPx = optics.activePxX * (1 + (n - 1) * (1 - overlap / 100));
+    const heightPx = optics.activePxY * (1 + (n - 1) * (1 - overlap / 100));
+    const widthMm = widthPx * optics.effectivePixelUm / 1000;
+    const heightMm = heightPx * optics.effectivePixelUm / 1000;
+
+    return {
+      countPerAxis: n,
+      overlapPercent: overlap,
+      panelCount: n * n,
+      widthPx,
+      heightPx,
+      widthArcsec: 2 * Math.atan(widthMm / (2 * optics.effectiveFocalMm)) * DEGREES * 3600,
+      heightArcsec: 2 * Math.atan(heightMm / (2 * optics.effectiveFocalMm)) * DEGREES * 3600,
+      panels
+    };
+  }
+
+  /** Compute target dimensions in pixels and fit margins inside active ROI, mosaic, and full sensor. */
+  function computeTargetFootprint({ optics, targetGeom, mosaicMetrics = null }) {
     const scale = optics.scaleArcsecPerPixel;
     const diameterPx = targetGeom.diameterArcsec / scale;
     const polarPx = targetGeom.polarArcsec / scale;
@@ -219,6 +258,7 @@
     const maxSpanPx = Math.max(diameterPx, ringWidthPx);
     const minRoiPx = Math.min(optics.activePxX, optics.activePxY);
     const minSensorPx = Math.min(optics.sensorBinPxX, optics.sensorBinPxY);
+    const minMosaicPx = mosaicMetrics ? Math.min(mosaicMetrics.widthPx, mosaicMetrics.heightPx) : minRoiPx;
 
     return {
       diameterPx,
@@ -227,10 +267,13 @@
       ringHeightPx,
       maxSpanPx,
       roiCoveragePct: (maxSpanPx / minRoiPx) * 100,
+      mosaicCoveragePct: (maxSpanPx / minMosaicPx) * 100,
       sensorCoveragePct: (maxSpanPx / minSensorPx) * 100,
       fitsRoi: maxSpanPx <= minRoiPx,
+      fitsMosaic: maxSpanPx <= minMosaicPx,
       fitsSensor: maxSpanPx <= minSensorPx,
-      roiMarginFactor: minRoiPx / maxSpanPx
+      roiMarginFactor: minRoiPx / maxSpanPx,
+      mosaicMarginFactor: minMosaicPx / maxSpanPx
     };
   }
 
@@ -248,6 +291,7 @@
     computeBarlowSpacing,
     calculatePlanetaryOptics,
     computeSpacingGuidance,
+    computePlanetaryMosaic,
     computeTargetFootprint,
     formatAngleArcsec
   };

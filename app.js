@@ -9,6 +9,7 @@
     computeBarlowSpacing,
     calculatePlanetaryOptics,
     computeSpacingGuidance,
+    computePlanetaryMosaic,
     computeTargetFootprint,
     formatAngleArcsec
   } = window.PlanetaryOptics;
@@ -18,7 +19,8 @@
     BARLOWS,
     CAMERAS,
     ROI_PRESETS,
-    WAVELENGTHS
+    WAVELENGTHS,
+    SEEING_PRESETS
   } = window.PlanetaryCatalog;
 
   const $ = (id) => document.getElementById(id);
@@ -38,6 +40,7 @@
       focal: 1000,
       wavelengthId: '550',
       wavelengthNm: 550,
+      seeingId: 'standard',
       samplingK: 5,
       barlowId: 'barlow3',
       barlowMode: 'diverging',
@@ -62,6 +65,8 @@
       roiX: 640,
       roiY: 480,
       rotation: 0,
+      mosaic: 1,
+      overlap: 15,
       viewMode: 'roi',
       showGrid: true
     };
@@ -86,30 +91,34 @@
   function populateSelect(selectId, entries, selected) {
     const select = $(selectId);
     select.innerHTML = '';
-    for (const item of entries) {
-      const option = document.createElement('option');
-      option.value = item.id;
-      option.textContent = item.name;
-      select.append(option);
+    const hasGroups = entries.some((item) => item.group);
+    if (!hasGroups) {
+      for (const item of entries) {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        select.append(option);
+      }
+      select.value = selected;
+      return;
     }
-    select.value = selected;
-  }
-
-  function populateTargets() {
-    const select = $('targetPreset');
-    select.innerHTML = '';
-    for (const groupName of ['Planètes', 'Lune & Soleil', 'Autre']) {
+    const groups = [];
+    for (const item of entries) {
+      const label = item.group || 'Autre';
+      if (!groups.includes(label)) groups.push(label);
+    }
+    for (const groupName of groups) {
       const group = document.createElement('optgroup');
       group.label = groupName;
-      TARGETS.filter((t) => t.group === groupName).forEach((t) => {
+      entries.filter((item) => (item.group || 'Autre') === groupName).forEach((item) => {
         const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.name;
+        opt.value = item.id;
+        opt.textContent = item.name;
         group.append(opt);
       });
       select.append(group);
     }
-    select.value = state.targetId;
+    select.value = selected;
   }
 
   function getTarget() {
@@ -134,9 +143,12 @@
     $('telescope').value = state.telescopeId;
     $('aperture').value = state.aperture;
     $('focal').value = state.focal;
-    $('wavelengthPreset').value = state.wavelengthId;
-    $('wavelengthNm').value = state.wavelengthNm;
+    $('seeingPreset').value = state.seeingId;
+    $('customSeeingRow').classList.toggle('hidden', state.seeingId !== 'custom');
     $('samplingK').value = state.samplingK;
+    $('wavelengthPreset').value = state.wavelengthId;
+    $('customWavelengthRow').classList.toggle('hidden', state.wavelengthId !== 'custom');
+    $('wavelengthNm').value = state.wavelengthNm;
 
     $('barlow').value = state.barlowId;
     $('barlowMode').value = state.barlowMode;
@@ -159,7 +171,7 @@
     const isFixed = state.barlowMode === 'fixed';
     const isDiverging = state.barlowMode === 'diverging';
     $('spacingControls').classList.toggle('hidden', isNone || isFixed);
-    $('fixedFactorRow').classList.toggle('hidden', !isFixed);
+    $('fixedFactorRow').classList.toggle('hidden', state.barlowId !== 'custom_fixed');
     $('barlowFocalWrap').classList.toggle('hidden', !isDiverging);
     $('barlowNominalWrap').classList.toggle('hidden', isDiverging || isNone);
     $('barlowBarrelMm').disabled = isNone || isFixed;
@@ -176,6 +188,9 @@
     $('roiY').value = state.roiId === 'full' ? Math.max(1, Math.floor(state.pixelsY / state.binning)) : state.roiY;
     $('rotation').value = state.rotation;
     $('rotationValue').textContent = `${state.rotation}°`;
+    $('mosaic').value = String(state.mosaic);
+    $('overlap').value = state.overlap;
+    $('overlap').disabled = Number(state.mosaic) === 1;
 
     $('viewMode').value = state.viewMode;
     $('toggleGrid').setAttribute('aria-pressed', String(state.showGrid));
@@ -233,12 +248,19 @@
       nominalFactor: state.barlowNominalFactor
     });
 
-    const footprint = computeTargetFootprint({ optics, targetGeom });
-    return { target, targetGeom, spacing, optics, guidance, footprint };
+    const mosaicMetrics = computePlanetaryMosaic({
+      optics,
+      mosaic: state.mosaic,
+      overlapPercent: state.overlap
+    });
+
+    const footprint = computeTargetFootprint({ optics, targetGeom, mosaicMetrics });
+    return { target, targetGeom, spacing, optics, guidance, mosaicMetrics, footprint };
   }
 
   function syncMetrics(calc) {
-    const { target, targetGeom, spacing, optics, guidance, footprint } = calc;
+    const { target, targetGeom, spacing, optics, guidance, mosaicMetrics, footprint } = calc;
+    const isMosaic = mosaicMetrics.countPerAxis > 1;
 
     $('objectTitle').textContent = target.name;
     const sizeParts = [`Diamètre ${formatAngleArcsec(targetGeom.diameterArcsec)}`];
@@ -270,8 +292,16 @@
       : `${intFmt.format(Math.round(footprint.diameterPx))} <span>× ${intFmt.format(Math.round(secondaryPx))} px</span>`;
 
     const covEl = $('statTargetCoverage');
-    if (!footprint.fitsSensor) {
-      covEl.textContent = `Dépasse du capteur (${dec(footprint.sensorCoveragePct, 0)} %)`;
+    if (isMosaic) {
+      if (footprint.fitsMosaic) {
+        covEl.textContent = `${dec(footprint.mosaicCoveragePct, 1)} % de la mosaïque · marge ${dec(footprint.mosaicMarginFactor, 1)}×`;
+        covEl.className = 'muted status-ok';
+      } else {
+        covEl.textContent = `Dépasse la mosaïque (${dec(footprint.mosaicCoveragePct, 0)} %)`;
+        covEl.className = 'muted status-bad';
+      }
+    } else if (!footprint.fitsSensor) {
+      covEl.textContent = `Dépasse du capteur (${dec(footprint.sensorCoveragePct, 0)} %) — essaie une mosaïque`;
       covEl.className = 'muted status-bad';
     } else if (!footprint.fitsRoi) {
       covEl.textContent = `Dépasse du ROI (${dec(footprint.roiCoveragePct, 0)} %)`;
@@ -298,9 +328,13 @@
       $('statFactor').textContent = `${intFmt.format(state.focal)} mm × ${dec(optics.effectiveFactor, 2)} · tirage ${dec(spacing.totalSpacingMm, 0)} mm`;
     }
 
-    // Stat 4: Active FOV & sensor
-    $('statFov').innerHTML = `${formatAngleArcsec(optics.fovWidthArcsec)} <span>×</span> ${formatAngleArcsec(optics.fovHeightArcsec)}`;
-    $('statSensor').textContent = `ROI ${optics.activePxX} × ${optics.activePxY} px · capteur ${dec(optics.sensorWidthMm)} × ${dec(optics.sensorHeightMm)} mm`;
+    // Stat 4: Active FOV & sensor / mosaic
+    const fovW = isMosaic ? mosaicMetrics.widthArcsec : optics.fovWidthArcsec;
+    const fovH = isMosaic ? mosaicMetrics.heightArcsec : optics.fovHeightArcsec;
+    $('statFov').innerHTML = `${formatAngleArcsec(fovW)} <span>×</span> ${formatAngleArcsec(fovH)}`;
+    $('statSensor').textContent = isMosaic
+      ? `Mosaïque ${mosaicMetrics.countPerAxis} × ${mosaicMetrics.countPerAxis} · ${mosaicMetrics.overlapPercent} % de recouvrement`
+      : `ROI ${optics.activePxX} × ${optics.activePxY} px · capteur ${dec(optics.sensorWidthMm)} × ${dec(optics.sensorHeightMm)} mm`;
 
     // Spacing guidance summary inside Barlow details
     const summaryEl = $('spacingSummary');
@@ -322,24 +356,32 @@
     // Atlas bottom status
     const statusEl = $('atlasStatus');
     statusEl.innerHTML = `<span class="${statusClass}">${st.label}</span> · f/${dec(optics.effectiveFocalRatio, 1)} · Airy ${dec(optics.airyDiameterPx, 1)} px`;
-    $('legendLabel').textContent = state.roiId === 'full'
-      ? `Plein capteur (${optics.sensorBinPxX}×${optics.sensorBinPxY})`
-      : `ROI ${optics.activePxX}×${optics.activePxY} / ${optics.sensorBinPxX}×${optics.sensorBinPxY}`;
+    if (isMosaic) {
+      $('legendLabel').textContent = `${mosaicMetrics.panelCount} champs mosaïque (${mosaicMetrics.overlapPercent} %)`;
+    } else {
+      $('legendLabel').textContent = state.roiId === 'full'
+        ? `Plein capteur (${optics.sensorBinPxX}×${optics.sensorBinPxY})`
+        : `ROI ${optics.activePxX}×${optics.activePxY} / ${optics.sensorBinPxX}×${optics.sensorBinPxY}`;
+    }
   }
 
   function getBasePixelsPerSensorPx(width, height, calc) {
-    const { optics, footprint } = calc;
+    const { optics, mosaicMetrics, footprint } = calc;
     const pad = 0.78;
     if (state.viewMode === 'sensor') {
-      return Math.min((width * pad) / optics.sensorBinPxX, (height * pad) / optics.sensorBinPxY);
+      const spanX = Math.max(optics.sensorBinPxX, mosaicMetrics.widthPx);
+      const spanY = Math.max(optics.sensorBinPxY, mosaicMetrics.heightPx);
+      return Math.min((width * pad) / spanX, (height * pad) / spanY);
     }
     if (state.viewMode === 'planet') {
       const span = Math.max(footprint.maxSpanPx, optics.airyDiameterPx * 3, 24);
       return Math.min((width * 0.56) / span, (height * 0.56) / span);
     }
-    // 'roi': frame active ROI (and include target if it's larger than ROI)
-    const spanX = Math.max(optics.activePxX, footprint.maxSpanPx * 1.15);
-    const spanY = Math.max(optics.activePxY, footprint.maxSpanPx * 1.15);
+    // 'roi': frame active ROI or full mosaic (and include target if larger)
+    const frameW = mosaicMetrics.countPerAxis > 1 ? mosaicMetrics.widthPx : optics.activePxX;
+    const frameH = mosaicMetrics.countPerAxis > 1 ? mosaicMetrics.heightPx : optics.activePxY;
+    const spanX = Math.max(frameW, footprint.maxSpanPx * 1.15);
+    const spanY = Math.max(frameH, footprint.maxSpanPx * 1.15);
     return Math.min((width * pad) / spanX, (height * pad) / spanY);
   }
 
@@ -644,14 +686,42 @@
     ctx.restore();
   }
 
-  function drawSensorAndRoi(ctx, cx, cy, pxPerSensorPx, optics) {
+  function drawFramingOverlay(ctx, cx, cy, pxPerSensorPx, optics, mosaicMetrics) {
     const sW = optics.sensorBinPxX * pxPerSensorPx;
     const sH = optics.sensorBinPxY * pxPerSensorPx;
     const rW = optics.activePxX * pxPerSensorPx;
     const rH = optics.activePxY * pxPerSensorPx;
 
-    // Full sensor outline
     ctx.save();
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+
+    if (mosaicMetrics.countPerAxis > 1) {
+      for (const p of mosaicMetrics.panels) {
+        const px = cx + p.centerOffsetPxX * pxPerSensorPx - rW / 2;
+        const py = cy + p.centerOffsetPxY * pxPerSensorPx - rH / 2;
+        ctx.fillStyle = 'rgba(255, 179, 71, 0.04)';
+        ctx.fillRect(px, py, rW, rH);
+        ctx.strokeStyle = 'rgba(255, 179, 71, 0.85)';
+        ctx.lineWidth = 1.6;
+        ctx.strokeRect(px, py, rW, rH);
+        if (rW > 34 && rH > 24) {
+          ctx.fillStyle = 'rgba(255, 179, 71, 0.72)';
+          ctx.fillText(String(p.index), px + 6, py + 15);
+        }
+      }
+      const mW = mosaicMetrics.widthPx * pxPerSensorPx;
+      const mH = mosaicMetrics.heightPx * pxPerSensorPx;
+      ctx.fillStyle = '#ffb347';
+      ctx.fillText(
+        `Mosaïque ${mosaicMetrics.countPerAxis} × ${mosaicMetrics.countPerAxis} · ${formatAngleArcsec(mosaicMetrics.widthArcsec)} × ${formatAngleArcsec(mosaicMetrics.heightArcsec)}`,
+        cx - mW / 2 + 4,
+        cy - mH / 2 - 7
+      );
+      ctx.restore();
+      return;
+    }
+
+    // Full sensor outline
     ctx.strokeStyle = 'rgba(139, 145, 156, 0.45)';
     ctx.lineWidth = 1.2;
     ctx.setLineDash([6, 4]);
@@ -659,7 +729,6 @@
     ctx.setLineDash([]);
 
     ctx.fillStyle = 'rgba(139, 145, 156, 0.8)';
-    ctx.font = '11px system-ui, -apple-system, sans-serif';
     if (sW > 90 && (optics.activePxX !== optics.sensorBinPxX || optics.activePxY !== optics.sensorBinPxY)) {
       ctx.fillText(`Capteur ${optics.sensorBinPxX} × ${optics.sensorBinPxY} px`, cx - sW / 2 + 6, cy - sH / 2 - 6);
     }
@@ -799,7 +868,7 @@
 
     drawGrid(ctx, rect.width, rect.height, cx, cy, pxPerSensorPx, calc.optics);
     drawTargetDisc(ctx, cx, cy, pxPerSensorPx, calc);
-    drawSensorAndRoi(ctx, cx, cy, pxPerSensorPx, calc.optics);
+    drawFramingOverlay(ctx, cx, cy, pxPerSensorPx, calc.optics, calc.mosaicMetrics);
     drawScaleBar(ctx, rect.height, pxPerSensorPx, calc.optics.scaleArcsecPerPixel);
     drawAiryInset(ctx, rect.width, calc.optics);
   }
@@ -917,6 +986,19 @@
       onValid: () => { state.telescopeId = 'custom'; }
     });
 
+    $('seeingPreset').addEventListener('change', () => {
+      const item = SEEING_PRESETS.find((s) => s.id === $('seeingPreset').value);
+      if (!item) return;
+      state.seeingId = item.id;
+      if (item.id !== 'custom') state.samplingK = item.k;
+      updateControls();
+      render();
+    });
+    setNumeric('samplingK', 'samplingK', {
+      label: 'critère F/D', min: 1, max: 15,
+      onValid: () => { state.seeingId = 'custom'; }
+    });
+
     $('wavelengthPreset').addEventListener('change', () => {
       const item = WAVELENGTHS.find((w) => w.id === $('wavelengthPreset').value);
       if (!item) return;
@@ -929,7 +1011,6 @@
       label: 'longueur d’onde', min: 250, max: 2000,
       onValid: () => { state.wavelengthId = 'custom'; }
     });
-    setNumeric('samplingK', 'samplingK', { label: 'critère F/D', min: 1, max: 15 });
 
     $('barlow').addEventListener('change', () => {
       const item = BARLOWS.find((b) => b.id === $('barlow').value);
@@ -1029,6 +1110,14 @@
       render();
     });
 
+    $('mosaic').addEventListener('change', () => {
+      state.mosaic = Number($('mosaic').value);
+      updateControls();
+      fitFrame();
+      render();
+    });
+    setNumeric('overlap', 'overlap', { label: 'recouvrement', min: 0, max: 60 });
+
     $('viewMode').addEventListener('change', () => {
       state.viewMode = $('viewMode').value;
       fitFrame();
@@ -1106,10 +1195,11 @@
   function makeShareLink() {
     const keys = [
       'targetId', 'sizeMode', 'dateStr', 'customDiameter', 'customRing', 'customRingTilt',
-      'telescopeId', 'aperture', 'focal', 'wavelengthId', 'wavelengthNm', 'samplingK',
+      'telescopeId', 'aperture', 'focal', 'wavelengthId', 'wavelengthNm', 'seeingId', 'samplingK',
       'barlowId', 'barlowMode', 'barlowNominalFactor', 'barlowFocalMm', 'barlowBarrelMm',
       'spacerMm', 'useAdc', 'adcMm', 'useFilterWheel', 'filterMm', 'cameraBackfocusMm', 'fixedFactor',
-      'cameraId', 'pixelsX', 'pixelsY', 'pixelUm', 'binning', 'roiId', 'roiX', 'roiY', 'rotation', 'viewMode'
+      'cameraId', 'pixelsX', 'pixelsY', 'pixelUm', 'binning', 'roiId', 'roiX', 'roiY', 'rotation',
+      'mosaic', 'overlap', 'viewMode'
     ];
     const url = new URL(window.location.href);
     url.search = '';
@@ -1126,9 +1216,10 @@
       const numKeys = [
         'customDiameter', 'customRing', 'customRingTilt', 'aperture', 'focal', 'wavelengthNm', 'samplingK',
         'barlowNominalFactor', 'barlowFocalMm', 'barlowBarrelMm', 'spacerMm', 'adcMm', 'filterMm',
-        'cameraBackfocusMm', 'fixedFactor', 'pixelsX', 'pixelsY', 'pixelUm', 'binning', 'roiX', 'roiY', 'rotation'
+        'cameraBackfocusMm', 'fixedFactor', 'pixelsX', 'pixelsY', 'pixelUm', 'binning', 'roiX', 'roiY',
+        'rotation', 'mosaic', 'overlap'
       ];
-      const textKeys = ['targetId', 'sizeMode', 'dateStr', 'telescopeId', 'wavelengthId', 'barlowId', 'barlowMode', 'cameraId', 'roiId', 'viewMode'];
+      const textKeys = ['targetId', 'sizeMode', 'dateStr', 'telescopeId', 'wavelengthId', 'seeingId', 'barlowId', 'barlowMode', 'cameraId', 'roiId', 'viewMode'];
       const boolKeys = ['useAdc', 'useFilterWheel'];
 
       for (const k of numKeys) {
@@ -1151,6 +1242,7 @@
       if (!CAMERAS.some((c) => c.id === draft.cameraId)) draft.cameraId = 'custom';
       if (!ROI_PRESETS.some((r) => r.id === draft.roiId)) draft.roiId = 'custom';
       if (!WAVELENGTHS.some((w) => w.id === draft.wavelengthId)) draft.wavelengthId = 'custom';
+      if (!SEEING_PRESETS.some((s) => s.id === draft.seeingId)) draft.seeingId = 'custom';
 
       state = draft;
       validateSettings();
@@ -1202,6 +1294,7 @@
           rotationDeg: state.rotation
         },
         optics: calc.optics,
+        mosaic: calc.mosaicMetrics,
         footprint: calc.footprint,
         spacingGuidance: calc.guidance
       };
@@ -1217,8 +1310,9 @@
     }
   }
 
-  populateTargets();
+  populateSelect('targetPreset', TARGETS, state.targetId);
   populateSelect('telescope', TELESCOPES, state.telescopeId);
+  populateSelect('seeingPreset', SEEING_PRESETS, state.seeingId);
   populateSelect('wavelengthPreset', WAVELENGTHS, state.wavelengthId);
   populateSelect('barlow', BARLOWS, state.barlowId);
   populateSelect('camera', CAMERAS, state.cameraId);

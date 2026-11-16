@@ -11,11 +11,10 @@
 - **Solar System targets**: Mercury, Venus, Mars, Jupiter, Saturn (globe + tilted rings), Uranus, Neptune, Moon (full disc, Clavius, Copernicus), Sun, and custom targets.
 - **Built-in offline ephemeris (1800–2050)**: computes apparent angular diameter, distance (AU / km), illuminated phase, and Saturn's ring tilt angle for any date, plus *Opposition / Mean / Conjunction* presets and manual dimensions.
 - **Telescopes & spectral band**: common presets (Newton, Dobson, SCT, Maksutov, refractors) or custom aperture and focal length; selectable wavelength (Visible 550 nm, Blue, Red, IR 685/850 nm, CH4 889 nm) and adjustable sampling F/D rule.
-- **Barlow & full spacing chain (tirage)**:
-  - **Classical diverging Barlow** ($M = 1 + d / |f_b|$): combines Barlow barrel length, extension spacers, ADC, filter drawer/wheel, and camera flange focal distance.
-  - **Telecentric amplifiers** (constant factor + progressive Powermate 5× model) and **custom fixed factor / focal reducer**.
-  - Live spacing guidance indicating how many millimeters to add or remove to hit the target focal ratio.
-- **Planetary cameras & ROI**: ZWO ASI662MC, ASI224MC, ASI678MC, ASI462MC, ASI585MC, ASI715MC, ASI290MM, ASI178MC, ASI174MM, ASI533MC Pro, or custom sensor; `1×1` / `2×2` binning and selectable ROI window (`640×480`, `800×600`, full sensor, or custom).
+- **Barlows, reducers & spacing (tirage)**:
+  - Focal reducers (`0.5×`, `0.63×`, `0.7×`, `0.8×`), classical diverging Barlows (`1.3×` to `5×`), telecentric amplifiers (`2×` to `5×` Powermate / Focal Extender), or any custom fixed factor.
+  - Optional advanced spacing chain: Barlow barrel length, extension spacers, ADC, filter drawer/wheel, and camera flange focal distance, with live spacing guidance.
+- **Planetary & DSO/lunar cameras, ROI & mosaics**: ZWO planetary cameras (ASI120MC-S, ASI224MC, ASI662MC, ASI678MC, ASI462MC, ASI585MC, ASI715MC, ASI290MM, ASI178MC, ASI174MM), large sensors for Moon/Sun (ASI533MC, ASI294MC, ASI183MC, ASI2600MC, APS-C, full frame) or custom sensor; `1×1` / `2×2` binning, ROI windowing, and `2×2` to `4×4` mosaics with adjustable overlap.
 - **Scaled interactive preview**: full sensor, ROI zoom, or target zoom with pixel grid, scale bar, and live **Airy disc vs pixel grid** inset.
 - **100% offline**: shareable URL-encoded parameters and full JSON export.
 
