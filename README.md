@@ -2,6 +2,8 @@
 
 *English · [Français](README.fr.md)*
 
+**[▶ Open the app](https://nktrois.github.io/muon-planetaire/)**, nothing to install.
+
 **Muon Planétaire** is the planetary sister app to [Muon Ciel profond](https://github.com/nktrois/muon-ciel-profond): a zero-dependency, static HTML/CSS/JavaScript simulator for planetary, lunar, and solar astrophotography. No install, no server, no account: it runs in any recent browser on Windows, macOS, and Linux. The interface is in French.
 
 ## Features
@@ -19,7 +21,9 @@
 
 ## Run it
 
-Download the repository (*Code → Download ZIP*), unzip it, and double-click `index.html`. Everything runs offline without any network call.
+**Online:** [https://nktrois.github.io/muon-planetaire/](https://nktrois.github.io/muon-planetaire/), works on computer and phone.
+
+**Offline copy:** download the repository (*Code → Download ZIP*), unzip it, and double-click `index.html`. Everything runs offline without any network call.
 
 ## Tests
 
